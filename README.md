@@ -39,5 +39,5 @@
 - `srl`: 136011
 - `ner`: 129582
 - `el`: 129490
-- `za`: 98542
-- `cr`: 52518
+- `za`: 98542 *(intra-sentence)*
+- `cr`: 52518 *(intra-sentence)*

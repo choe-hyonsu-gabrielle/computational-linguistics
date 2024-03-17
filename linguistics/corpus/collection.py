@@ -332,7 +332,7 @@ class Corpus:
         start = time.time()
         corpus: Corpus = load_pickle(filename)
         lapse = time.time() - start
-        print(f'- unpickling `{filename}`, {lapse:.2f} sec lapsed, {len(corpus)} Sentences: {corpus}')
+        print(f'- unpickling `{filename}`, {lapse:.2f} sec lapsed: {corpus}')
         return corpus
 
     def to_pickle(self, filename):

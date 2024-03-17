@@ -26,6 +26,9 @@ class Layer:
         pformat = pprint.pformat(self.tolist(), indent=2)
         return '\n'.join([header, pformat])
 
+    def __len__(self):
+        return len(self.data)
+
     def tolist(self):
         return self.data
 

@@ -6,38 +6,38 @@
 ```
 
 ### Statistics
-- `pos-wsd-dep-srl-ner-el-za-cr`: 39011
-- `pos-wsd-dep-srl-ner-el-cr`: 9213
-- `pos-wsd-dep-srl-ner-el-za`: 47440
-- `pos-wsd-dep-srl-ner-za-cr`: 46
-- `pos-wsd-dep-ner-el-za-cr`: 190
-- `pos-wsd-dep-srl-ner-el`: 22284
-- `pos-wsd-dep-srl-ner-za`: 33
-- `pos-wsd-dep-srl-ner-cr`: 5
-- `pos-wsd-dep-ner-el-cr`: 2441
-- `pos-wsd-dep-srl-za-cr`: 1172
-- `pos-wsd-dep-ner-el-za`: 593
-- `pos-wsd-dep-srl-ner`: 7
-- `pos-wsd-dep-ner-el`: 8158
-- `pos-wsd-dep-srl-za`: 9752
-- `pos-wsd-dep-srl-cr`: 327
-- `pos-wsd-dep-za-cr`: 11
-- `pos-wsd-dep-srl`: 6720
-- `pos-wsd-dep-ner`: 1
-- `pos-wsd-dep-cr`: 102
-- `pos-wsd-dep-za`: 289
+- `pos-dep-wsd-srl-ner-el-za-cr`: 39011
+- `pos-dep-wsd-srl-ner-el-cr`: 9213
+- `pos-dep-wsd-srl-ner-el-za`: 47440
+- `pos-dep-wsd-srl-ner-za-cr`: 46
+- `pos-dep-wsd-ner-el-za-cr`: 190
+- `pos-dep-wsd-srl-ner-el`: 22284
+- `pos-dep-wsd-srl-ner-za`: 33
+- `pos-dep-wsd-srl-ner-cr`: 5
+- `pos-dep-wsd-ner-el-cr`: 2441
+- `pos-dep-wsd-srl-za-cr`: 1172
+- `pos-dep-wsd-ner-el-za`: 593
+- `pos-dep-wsd-srl-ner`: 7
+- `pos-dep-wsd-ner-el`: 8158
+- `pos-dep-wsd-srl-za`: 9752
+- `pos-dep-wsd-srl-cr`: 327
+- `pos-dep-wsd-za-cr`: 11
+- `pos-dep-wsd-srl`: 6720
+- `pos-dep-wsd-ner`: 1
+- `pos-dep-wsd-cr`: 102
+- `pos-dep-wsd-za`: 289
 - `pos-dep-ner-el`: 160
-- `pos-wsd-dep`: 2054
+- `pos-dep-wsd`: 2054
 - `pos-dep-srl`: 1
 - `pos-dep-za`: 5
 - `pos-dep`: 67
 
 ### Available items per layer
 - `pos`: 150082
-- `wsd`: 149849
 - `dep`: 150082
+- `wsd`: 149849
+- `srl`: 136011
 - `ner`: 129582
 - `el`: 129490
-- `cr`: 52518
-- `srl`: 136011
 - `za`: 98542
+- `cr`: 52518

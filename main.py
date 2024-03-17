@@ -5,7 +5,7 @@ from collections import defaultdict
 if __name__ == '__main__':
     # corpus = Corpus.from_files('D:/Corpora & Language Resources/modu-corenlp/layers-complete/*/*.json')
     corpus = Corpus.from_pickle('linguistics/corpus/corpus.pkl')
-    ordered_layers = ['pos', 'wsd', 'dep', 'srl', 'ner', 'el', 'za', 'cr']
+    ordered_layers = ['pos', 'dep', 'wsd', 'srl', 'ner', 'el', 'za', 'cr']
 
     counts = defaultdict(int)
     available = defaultdict(int)
@@ -27,5 +27,5 @@ if __name__ == '__main__':
     for k, v in sorted(counts.items(), key=lambda x: len(x[0]), reverse=True):
         print(f'- `{k}`: {v}')
 
-    for k, v in available.items():
-        print(f'- `{k}`: {v}')
+    for k in ordered_layers:
+        print(f'- `{k}`: {available[k]}')

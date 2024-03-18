@@ -54,7 +54,7 @@ class Annotations:
         return self.super.canonical_form
 
     def word(self, word_id: int):
-        return self.super.word.get(word_id, None)
+        return self.super.word_dict.get(word_id, None)
 
 
 class Sentence:
@@ -64,7 +64,7 @@ class Sentence:
         self.super: Optional[Document] = super_instance
         self.annotations = Annotations(self)
         self.index: dict[int, tuple[int, int]] = dict()  # mapping of {word_id: (begin, end)}
-        self.word = dict()   # mapping of {word_id: "word_form"}
+        self.word_dict = dict()   # mapping of {word_id: "word_form"}
 
     def __repr__(self):
         return f'<{self.__class__.__name__} → id: {self.ref_id}, form ({len(self.forms)}): "{self.canonical_form}">'
@@ -125,6 +125,10 @@ class Sentence:
         return CRLayer(layer='cr', data=[dict(mention=cluster) for cluster in valid_clusters], super_instance=self)
 
     @property
+    def words(self) -> list[str]:
+        return list(self.word_dict.values())
+
+    @property
     def canonical_form(self) -> str:
         if len(self.forms) == 1:
             return list(self.forms)[0]
@@ -141,8 +145,8 @@ class Sentence:
 
     def add_word_index(self, words: dict):
         # it is supposed to be called once only if processing on `dep`
-        assert not self.word and not self.index
-        self.word = {w['id']: w['form'] for w in words}
+        assert not self.word_dict and not self.index
+        self.word_dict = {w['id']: w['form'] for w in words}
         self.index = {w['id']: (w['begin'], w['end']) for w in words}
 
     def word_id_to_span_ids(self, word_id: int) -> Optional[int]:

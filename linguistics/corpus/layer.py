@@ -46,6 +46,10 @@ class POSLayer(Layer):
     def __init__(self, layer: str, data: list, super_instance=None):
         super().__init__(layer=layer, data=[POSItem(**d) for d in data], super_instance=super_instance)
 
+    def __iter__(self):
+        for pos_item in self.data:
+            yield pos_item
+
     def tostring(self):
         """
         returns serialized POS tagged sequence

@@ -1,61 +1,60 @@
 from collections import namedtuple
 from transformers import PreTrainedTokenizer, AutoTokenizer
+from linguistics.corpus.process import Process
 from linguistics.corpus.collection import Sentence
 from linguistics.corpus.layer import POSLayer
 from linguistics.utils import subgroups
 
 
-class Process:
-    def __init__(self):
-        pass
+Subword = namedtuple(typename='Subword', field_names=['id', 'subword', 'trimmed', 'word_id', 'token_id'])
 
 
 class POSSubwordMorphemeAlignment:
-    def __init__(self, ref_id, sentence, words, morphemes, subwords, partition_by_word_ids=True):
-        self.ref_id = ref_id
-        self.sentence = sentence
-        self.words = words
-        self.morphemes = subgroups(morphemes, by='word_id') if partition_by_word_ids else morphemes
-        self.subwords = subgroups(subwords, by='word_id') if partition_by_word_ids else subwords
-        assert len(self.words) == len(self.morphemes) == len(self.subwords)
-        self.length = len(self.words)
+    def __init__(self, pos_layer: POSLayer, subwords: list[Subword], partition_by_word_ids=True):
+        self.pos_layer = pos_layer
+        self.morphemes = subgroups(pos_layer, by='word_id', starts_from=1) if partition_by_word_ids else pos_layer
+        self.subwords = subgroups(subwords, by='word_id', starts_from=0) if partition_by_word_ids else subwords
+        assert len(self.pos_layer.super.words) == len(self.morphemes) == len(self.subwords)
 
     def __repr__(self):
-        return f'\n[{self.__class__.__name__}] - ref_id: "{self.ref_id}" - len: {self.length}' \
-               f'\n- sentence: "{self.sentence}" - words: {self.words}' \
-               f'\n' + '\n'.join([f'\t{i:2d} sub: {self._get_trimmed_sub(i)}, morph: {self._get_morphemes(i)}'
-                                  for i in range(self.length)])
-
-    def _get_trimmed_sub(self, i):
-        return [s.trimmed for s in self.subwords[i]]
-
-    def _get_morphemes(self, i):
-        return [s.morpheme for s in self.morphemes[i]]
+        sentence: Sentence = self.pos_layer.super
+        words = sentence.words
+        length = len(words)
+        ref_id = sentence.ref_id
+        return (f'[{self.__class__.__name__}] ref_id: "{ref_id}", len: {length}, sentence: "{sentence}", words: {words}\n'
+                + '\n'.join([f'\t{i:2d} sub: {self._get_trimmed_sub(i)}, morph: {self._get_morphemes(i)}' for i in range(length)]))
 
     def align(self):
-        for word_id in range(self.length):
-            subwords = self._get_trimmed_sub(word_id)
-            morphemes = self._get_morphemes(word_id)
-            op_code, mapping = self.word_alignment(subwords, morphemes)
+        sentence: Sentence = self.pos_layer.super
+        for word_id in range(len(sentence.words)):
+            op_code, mapping = self.word_level_alignment(word_id)
 
-    @staticmethod
-    def word_alignment(subwords, morphemes):
+    def _get_trimmed_sub(self, i) -> list[str]:
+        return [s.trimmed for s in self.subwords[i]]
+
+    def _get_morphemes(self, i) -> list[str]:
+        return [s.morpheme for s in self.morphemes[i]]
+
+    def word_level_alignment(self, word_id: int):
         """
         This is a function which has dynamic programming approach partially, returns
-        :param subwords:
-        :param morphemes:
+        :param word_id: word_id to align
         :return:
         """
-        op_code = None
-        mapping = None
+        subwords = self._get_trimmed_sub(word_id)
+        morphemes = self._get_morphemes(word_id)
+
         if subwords == morphemes:
             # 완전 일치. ex) sub: ['역할', '을'], morph: ['역할', '을'] -> 그냥 zip()해서 return 하면 끝
             op_code = 'EXACT-ALIGNED'
+            mapping = list(zip(self.subwords[word_id], self.morphemes[word_id]))
             return op_code, mapping
         elif len(subwords) == 1:
             # subword 길이가 1. ex) sub: ['찾아보기'], morph: ['찾아보', '기'] -> 그냥 1:n으로 대응시킴
             #                      sub: ['어떻게'], morph: ['어떻', '게']
             op_code = 'ONE-TO-MANY'
+            mapping = (self.subwords[word_id][0], self.morphemes[word_id])
+            return op_code, mapping
         elif len(subwords) > 1 and len(morphemes) == 1:
             # subword 길이가 1. ex) sub: ['우리', '나라'], morph: ['우리나라'] -> 길이 상관 없이 POS 태그를 B, I로 분할하여 대응
             # sub: ['그', '~'], morph: ['그'] 이런 경우처럼 오류가 있을 수도 있음
@@ -90,6 +89,8 @@ class POSSubwordMorphemeAlignment:
             #                  sub: ['넣', '어', '주', '시고'], morph: ['넣', '어', '주', '시', '고']
             #                  sub: ['무력', '화', '할'], morph: ['무력', '화', '하', 'ㄹ']
             op_code = 'MANY-TO-MANY'
+        else:
+            raise NotImplemented
 
 
 class POSProcess(Process):
@@ -100,7 +101,6 @@ class POSProcess(Process):
 
     def __call__(self, pos_layer: POSLayer = None, *args, **kwargs):
         sentence: Sentence = pos_layer.super
-
         input_ids, offset_mapping = self.tokenizer.encode_plus(
             text=sentence.canonical_form,
             add_special_tokens=True,
@@ -119,21 +119,12 @@ class POSProcess(Process):
         assert len(tokens) == len(word_ids)
 
         subwords = []
-        Subword = namedtuple('Subword', ['id', 'subword', 'trimmed', 'word_id', 'token_id'])
         for idx, (subword, word_id, token_id) in enumerate(zip(tokens, word_ids, input_ids)):
             trimmed = subword[len(self.contact_prefix):] if subword.startswith(self.contact_prefix) else subword
             subwords.append(Subword(idx, subword, trimmed, word_id, token_id))
 
-        morphemes = []
-        Morpheme = namedtuple('Morpheme', ['id', 'form', 'label', 'word_id', 'position'])
-        for idx, pos_item in enumerate(pos_layer.tolist()):
-            morphemes.append(Morpheme(idx, pos_item.form, pos_item.label, pos_item.word_id-1, pos_item.position-1))
-
         return POSSubwordMorphemeAlignment(
-            ref_id=sentence.ref_id,
-            sentence=sentence.canonical_form,
-            words=sentence.words,
-            morphemes=morphemes,
+            pos_layer=pos_layer,
             subwords=subwords,
             partition_by_word_ids=True
         )

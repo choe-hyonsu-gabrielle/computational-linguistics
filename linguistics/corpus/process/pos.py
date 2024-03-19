@@ -41,53 +41,56 @@ class POSSubwordMorphemeAlignment:
         :param word_id: word_id to align
         :return:
         """
-        subwords = self._get_trimmed_sub(word_id)
-        morphemes = self._get_morphemes(word_id)
+        tokens: list[str] = self._get_trimmed_sub(word_id)
+        morphs: list[str] = self._get_morphemes(word_id)
 
-        if subwords == morphemes:
-            # 완전 일치. ex) sub: ['역할', '을'], morph: ['역할', '을'] -> 그냥 zip()해서 return 하면 끝
+        if tokens == morphs:
+            # 완전 일치. ex) tokens: ['역할', '을'], morphs: ['역할', '을'] -> 그냥 zip()해서 return 하면 끝
             op_code = 'EXACT-ALIGNED'
             mapping = list(zip(self.subwords[word_id], self.morphemes[word_id]))
             return op_code, mapping
-        elif len(subwords) == 1:
-            # subword 길이가 1. ex) sub: ['찾아보기'], morph: ['찾아보', '기'] -> 그냥 1:n으로 대응시킴
-            #                      sub: ['어떻게'], morph: ['어떻', '게']
+        elif len(tokens) == 1:
+            # tokens 길이가 1. ex) tokens: ['찾아보기'], morphs: ['찾아보', '기'] -> 그냥 1:n으로 대응시킴
+            #                     tokens: ['어떻게'], morphs: ['어떻', '게']
             op_code = 'ONE-TO-MANY'
             mapping = (self.subwords[word_id][0], self.morphemes[word_id])
             return op_code, mapping
-        elif len(subwords) > 1 and len(morphemes) == 1:
-            # subword 길이가 1. ex) sub: ['우리', '나라'], morph: ['우리나라'] -> 길이 상관 없이 POS 태그를 B, I로 분할하여 대응
-            # sub: ['그', '~'], morph: ['그'] 이런 경우처럼 오류가 있을 수도 있음
+        elif len(tokens) > 1 and len(morphs) == 1:
+            # tokens 길이가 1. ex) tokens: ['우리', '나라'], morphs: ['우리나라'] -> 길이 상관 없이 POS 태그를 B, I로 분할하여 대응
+            # tokens: ['그', '~'], morphs: ['그'] 이런 경우처럼 오류가 있을 수도 있음
             op_code = 'MANY-TO-ONE'
-        elif len(subwords) > 1 and len(morphemes) > 1:
-            # sub > morph: ex) sub: ['아니', '겠', '습', '니까', '?'], morph: ['아니', '겠', '습니까', '?']
-            #                  sub: ['말', '이', '에', '요', '.'], morph: ['말', '이', '에요', '.']
-            #                  sub: ['학교', '에', '서'], morph: ['학교', '에서']
-            #                  sub: ['규탄', '대', '회', '를'], morph: ['규탄', '대회', '를']
-            #                  sub: ['부러워', '하', '더라', '니까'], morph: ['부러워하', '더라니까']
-            #                  sub: ['취업', '난', '으로'], morph: ['취업난', '으로']
-            #                  sub: ['핵', '미사', '일로'], morph: ['핵미사일', '로']
-            #                  sub: ['안전', '보', '장이', '사회'], morph: ['안전', '보장', '이사회']
+        elif len(tokens) > 1 and len(morphs) > 1:
+            # tokens > morph
+            # ex) tokens: ['아니', '겠', '습', '니까', '?'], morphs: ['아니', '겠', '습니까', '?']
+            #     tokens: ['말', '이', '에', '요', '.'], morphs: ['말', '이', '에요', '.']
+            #     tokens: ['학교', '에', '서'], morphs: ['학교', '에서']
+            #     tokens: ['규탄', '대', '회', '를'], morphs: ['규탄', '대회', '를']
+            #     tokens: ['부러워', '하', '더라', '니까'], morphs: ['부러워하', '더라니까']
+            #     tokens: ['취업', '난', '으로'], morphs: ['취업난', '으로']
+            #     tokens: ['핵', '미사', '일로'], morphs: ['핵미사일', '로']
+            #     tokens: ['안전', '보', '장이', '사회'], morphs: ['안전', '보장', '이사회']
 
-            # sub = morph: ex) sub: ['나가', '서'], morph: ['나가', '아서']
-            #                  sub: ['폐', '장', '했', '잖아'], morph: ['폐장', '하', '았', '잖아']
-            #                  sub: ['나라', '들이', '었', '거', '든', '요'], morph: ['나라', '들', '이', '었', '거든', '요']
-            #                  sub: ['놉', '시다', '.'], morph: ['놓', 'ㅂ시다', '.']
-            #                  sub: ['양성', '할', '게요', '"', ';', '충북', '대'], morph: ['양성', '하', 'ㄹ게', '요', '"', ';', '충북대']
-            #                  sub: ['말', '인', '데'], morph: ['말', '이', 'ㄴ데']
-            #                  sub: ['굉장', '한'], morph: ['굉장하', 'ㄴ']
+            # tokens = morph
+            # ex) tokens: ['나가', '서'], morphs: ['나가', '아서']
+            #     tokens: ['폐', '장', '했', '잖아'], morphs: ['폐장', '하', '았', '잖아']
+            #     tokens: ['나라', '들이', '었', '거', '든', '요'], morphs: ['나라', '들', '이', '었', '거든', '요']
+            #     tokens: ['놉', '시다', '.'], morphs: ['놓', 'ㅂ시다', '.']
+            #     tokens: ['양성', '할', '게요', '"', ';', '충북', '대'], morphs: ['양성', '하', 'ㄹ게', '요', '"', ';', '충북대']
+            #     tokens: ['말', '인', '데'], morphs: ['말', '이', 'ㄴ데']
+            #     tokens: ['굉장', '한'], morphs: ['굉장하', 'ㄴ']
 
-            # sub < morph: ex) sub: ['맞아', '주', '고'], morph: ['맞', '아', '주', '고']
-            #                  sub: ['반', '데', '.'], morph: ['바', '이', 'ㄴ데', '.']
-            #                  sub: ['생겼', '다', '?'], morph: ['생기', '었', '다', '?']
-            #                  sub: ['치명', '적', '인'], morph: ['치명', '적', '이', 'ㄴ']
-            #                  sub: ['떴', '잖아', '.'], morph: ['뜨', '었', '잖아', '.']
-            #                  sub: ['그래', '갖', '고'], morph: ['그러', '어', '갖', '고']
-            #                  sub: ['드세요', '.'], morph: ['들', '시', '어요', '.']
-            #                  sub: ['나아질', '까요', '?'], morph: ['나아지', 'ㄹ까', '요', '?']
-            #                  sub: ['연구', '하시', '는'], morph: ['연구', '하', '시', '는']
-            #                  sub: ['넣', '어', '주', '시고'], morph: ['넣', '어', '주', '시', '고']
-            #                  sub: ['무력', '화', '할'], morph: ['무력', '화', '하', 'ㄹ']
+            # tokens < morph:
+            # ex) tokens: ['맞아', '주', '고'], morphs: ['맞', '아', '주', '고']
+            #     tokens: ['반', '데', '.'], morphs: ['바', '이', 'ㄴ데', '.']
+            #     tokens: ['생겼', '다', '?'], morphs: ['생기', '었', '다', '?']
+            #     tokens: ['치명', '적', '인'], morphs: ['치명', '적', '이', 'ㄴ']
+            #     tokens: ['떴', '잖아', '.'], morphs: ['뜨', '었', '잖아', '.']
+            #     tokens: ['그래', '갖', '고'], morphs: ['그러', '어', '갖', '고']
+            #     tokens: ['드세요', '.'], morphs: ['들', '시', '어요', '.']
+            #     tokens: ['나아질', '까요', '?'], morphs: ['나아지', 'ㄹ까', '요', '?']
+            #     tokens: ['연구', '하시', '는'], morphs: ['연구', '하', '시', '는']
+            #     tokens: ['넣', '어', '주', '시고'], morphs: ['넣', '어', '주', '시', '고']
+            #     tokens: ['무력', '화', '할'], morphs: ['무력', '화', '하', 'ㄹ']
             op_code = 'MANY-TO-MANY'
         else:
             raise NotImplemented

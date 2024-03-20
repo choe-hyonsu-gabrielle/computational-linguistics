@@ -30,9 +30,9 @@ class POSSubwordMorphemeAlignment:
                     labels = [e.label for e in self.morphemes[word_id][m_begin:m_end]]
                 elif opcode == 'replace':
                     if t_end - t_begin == m_end - m_begin:
-                        labels = [f'$-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
+                        labels = [f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
                     elif 1 == t_end - t_begin < m_end - m_begin:
-                        labels = ['L-' + '+'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]])]
+                        labels = ['+'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]])]
                     elif 1 == m_end - m_begin < t_end - t_begin:
                         labels = ['I-' + self.morphemes[word_id][m_begin:m_end][0].label] * (t_end - t_begin)
                         labels[0] = 'B' + labels[0][1:]

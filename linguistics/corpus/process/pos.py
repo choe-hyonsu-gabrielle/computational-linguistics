@@ -45,8 +45,7 @@ class POSSubwordMorphemeAlignment:
                     labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
                 else:
                     raise NotImplementedError(opcode)
-
-                print(f'\t"{opcode}" t[{t_begin}:{t_end}] ~ m[{m_begin}:{m_end}] : {tokens[t_begin:t_end]} --> {labels[m_begin:m_end]}')
+                print(f'\t"{opcode:7}" t[{t_begin}:{t_end}] vs m[{m_begin}:{m_end}] - {tokens[t_begin:t_end]} → {labels}')
             print()
 
 

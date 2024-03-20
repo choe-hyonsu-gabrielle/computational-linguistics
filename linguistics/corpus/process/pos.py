@@ -1,3 +1,4 @@
+from difflib import SequenceMatcher
 from collections import namedtuple
 from transformers import PreTrainedTokenizer, AutoTokenizer
 from linguistics.corpus.process import Process
@@ -16,84 +17,35 @@ class POSSubwordMorphemeAlignment:
         self.subwords = subgroups(subwords, by='word_id', starts_from=0) if partition_by_word_ids else subwords
         assert len(self.pos_layer.super.words) == len(self.morphemes) == len(self.subwords)
 
-    def __repr__(self):
-        sentence: Sentence = self.pos_layer.super
-        words = sentence.words
-        length = len(words)
-        ref_id = sentence.ref_id
-        return (f'[{self.__class__.__name__}] ref_id: "{ref_id}", len: {length}, sentence: "{sentence}", words: {words}\n'
-                + '\n'.join([f'\t{i:2d} sub: {self._get_trimmed_sub(i)}, morph: {self._get_morphemes(i)}' for i in range(length)]))
-
     def align(self):
         sentence: Sentence = self.pos_layer.super
+        print(sentence.canonical_form)
         for word_id in range(len(sentence.words)):
-            op_code, mapping = self.word_level_alignment(word_id)
-
-    def _get_trimmed_sub(self, i) -> list[str]:
-        return [s.trimmed for s in self.subwords[i]]
-
-    def _get_morphemes(self, i) -> list[str]:
-        return [s.morpheme for s in self.morphemes[i]]
-
-    def word_level_alignment(self, word_id: int):
-        """
-        This is a function which has dynamic programming approach partially, returns
-        :param word_id: word_id to align
-        :return:
-        """
-        tokens: list[str] = self._get_trimmed_sub(word_id)
-        morphs: list[str] = self._get_morphemes(word_id)
-
-        if tokens == morphs:
-            # 완전 일치. ex) tokens: ['역할', '을'], morphs: ['역할', '을'] -> 그냥 zip()해서 return 하면 끝
-            op_code = 'EXACT-ALIGNED'
-            mapping = list(zip(self.subwords[word_id], self.morphemes[word_id]))
-            return op_code, mapping
-        elif len(tokens) == 1:
-            # tokens 길이가 1. ex) tokens: ['찾아보기'], morphs: ['찾아보', '기'] -> 그냥 1:n으로 대응시킴
-            #                     tokens: ['어떻게'], morphs: ['어떻', '게']
-            op_code = 'ONE-TO-MANY'
-            mapping = (self.subwords[word_id][0], self.morphemes[word_id])
-            return op_code, mapping
-        elif len(tokens) > 1 and len(morphs) == 1:
-            # tokens 길이가 1. ex) tokens: ['우리', '나라'], morphs: ['우리나라'] -> 길이 상관 없이 POS 태그를 B, I로 분할하여 대응
-            # tokens: ['그', '~'], morphs: ['그'] 이런 경우처럼 오류가 있을 수도 있음
-            op_code = 'MANY-TO-ONE'
-        elif len(tokens) > 1 and len(morphs) > 1:
-            # tokens > morph
-            # ex) tokens: ['아니', '겠', '습', '니까', '?'], morphs: ['아니', '겠', '습니까', '?']
-            #     tokens: ['말', '이', '에', '요', '.'], morphs: ['말', '이', '에요', '.']
-            #     tokens: ['학교', '에', '서'], morphs: ['학교', '에서']
-            #     tokens: ['규탄', '대', '회', '를'], morphs: ['규탄', '대회', '를']
-            #     tokens: ['부러워', '하', '더라', '니까'], morphs: ['부러워하', '더라니까']
-            #     tokens: ['취업', '난', '으로'], morphs: ['취업난', '으로']
-            #     tokens: ['핵', '미사', '일로'], morphs: ['핵미사일', '로']
-            #     tokens: ['안전', '보', '장이', '사회'], morphs: ['안전', '보장', '이사회']
-
-            # tokens = morph
-            # ex) tokens: ['나가', '서'], morphs: ['나가', '아서']
-            #     tokens: ['폐', '장', '했', '잖아'], morphs: ['폐장', '하', '았', '잖아']
-            #     tokens: ['나라', '들이', '었', '거', '든', '요'], morphs: ['나라', '들', '이', '었', '거든', '요']
-            #     tokens: ['놉', '시다', '.'], morphs: ['놓', 'ㅂ시다', '.']
-            #     tokens: ['양성', '할', '게요', '"', ';', '충북', '대'], morphs: ['양성', '하', 'ㄹ게', '요', '"', ';', '충북대']
-            #     tokens: ['말', '인', '데'], morphs: ['말', '이', 'ㄴ데']
-            #     tokens: ['굉장', '한'], morphs: ['굉장하', 'ㄴ']
-
-            # tokens < morph:
-            # ex) tokens: ['맞아', '주', '고'], morphs: ['맞', '아', '주', '고']
-            #     tokens: ['반', '데', '.'], morphs: ['바', '이', 'ㄴ데', '.']
-            #     tokens: ['생겼', '다', '?'], morphs: ['생기', '었', '다', '?']
-            #     tokens: ['치명', '적', '인'], morphs: ['치명', '적', '이', 'ㄴ']
-            #     tokens: ['떴', '잖아', '.'], morphs: ['뜨', '었', '잖아', '.']
-            #     tokens: ['그래', '갖', '고'], morphs: ['그러', '어', '갖', '고']
-            #     tokens: ['드세요', '.'], morphs: ['들', '시', '어요', '.']
-            #     tokens: ['나아질', '까요', '?'], morphs: ['나아지', 'ㄹ까', '요', '?']
-            #     tokens: ['연구', '하시', '는'], morphs: ['연구', '하', '시', '는']
-            #     tokens: ['넣', '어', '주', '시고'], morphs: ['넣', '어', '주', '시', '고']
-            #     tokens: ['무력', '화', '할'], morphs: ['무력', '화', '하', 'ㄹ']
-            op_code = 'MANY-TO-MANY'
-        else:
-            raise NotImplemented
+            tokens: list[str] = [e.trimmed for e in self.subwords[word_id]]
+            morphs: list[str] = [e.form for e in self.morphemes[word_id]]
+            matcher = SequenceMatcher(isjunk=None, a=tokens, b=morphs)
+            print(sentence.words[word_id])
+            for opcode, t_begin, t_end, m_begin, m_end in matcher.get_opcodes():
+                if opcode == 'equal':
+                    labels = ['S-'+e.label for e in self.morphemes[word_id]]
+                elif opcode == 'replace':
+                    if t_end - t_begin == m_end - m_begin:
+                        labels = [f'$-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                    elif 1 == t_end - t_begin < m_end - m_begin:
+                        labels = ';'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id]])
+                    elif 1 == m_end - m_begin < t_end - t_begin:
+                        labels = ['I-' + e.label for e in self.morphemes[word_id]] * (m_end - m_begin)
+                        labels[0] = 'B' + labels[0][1:]
+                        labels[-1] = 'E' + labels[-1][1:]
+                    else:
+                        labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                else:
+                    labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                print('\t{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'.format(
+                    opcode, t_begin, t_end, m_begin, m_end, tokens[t_begin:t_end], labels[m_begin:m_end]
+                    )
+                )
+            print()
 
 
 class POSProcess(Process):

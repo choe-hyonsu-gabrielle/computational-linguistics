@@ -12,4 +12,5 @@ if __name__ == '__main__':
 
     for snt in corpus.iter_sentences():
         alignment = pos_process(snt.pos)
-        break
+        alignment.align()
+        input('Press enter to continue...')

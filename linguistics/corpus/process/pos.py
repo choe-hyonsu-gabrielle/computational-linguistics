@@ -27,22 +27,22 @@ class POSSubwordMorphemeAlignment:
             print(sentence.words[word_id])
             for opcode, t_begin, t_end, m_begin, m_end in matcher.get_opcodes():
                 if opcode == 'equal':
-                    labels = ['S-'+e.label for e in self.morphemes[word_id]]
+                    labels = ['S-'+e.label for e in self.morphemes[word_id][m_begin:m_end]]
                 elif opcode == 'replace':
                     if t_end - t_begin == m_end - m_begin:
-                        labels = [f'$-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                        labels = [f'$-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
                     elif 1 == t_end - t_begin < m_end - m_begin:
-                        labels = ';'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id]])
+                        labels = [';'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]])]
                     elif 1 == m_end - m_begin < t_end - t_begin:
                         labels = ['I-' + self.morphemes[word_id][m_begin:m_end][0].label] * (t_end - t_begin)
                         labels[0] = 'B' + labels[0][1:]
                         labels[-1] = 'E' + labels[-1][1:]
                     else:
-                        labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                        labels = [f'?-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
                 elif opcode == 'insert':
-                    labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                    labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
                 elif opcode == 'delete':
-                    labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                    labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
                 else:
                     raise NotImplementedError(opcode)
                 print(f'\t"{opcode:7}" t[{t_begin}:{t_end}] vs m[{m_begin}:{m_end}] - {tokens[t_begin:t_end]} → {labels}')

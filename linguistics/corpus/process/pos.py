@@ -34,17 +34,19 @@ class POSSubwordMorphemeAlignment:
                     elif 1 == t_end - t_begin < m_end - m_begin:
                         labels = ';'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id]])
                     elif 1 == m_end - m_begin < t_end - t_begin:
-                        labels = ['I-' + e.label for e in self.morphemes[word_id]] * (m_end - m_begin)
+                        labels = ['I-' + self.morphemes[word_id][m_begin:m_end][0].label] * (t_end - t_begin)
                         labels[0] = 'B' + labels[0][1:]
                         labels[-1] = 'E' + labels[-1][1:]
                     else:
                         labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
-                else:
+                elif opcode == 'insert':
                     labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
-                print('\t{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'.format(
-                    opcode, t_begin, t_end, m_begin, m_end, tokens[t_begin:t_end], labels[m_begin:m_end]
-                    )
-                )
+                elif opcode == 'delete':
+                    labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id]]
+                else:
+                    raise NotImplementedError(opcode)
+
+                print(f'\t"{opcode}" t[{t_begin}:{t_end}] ~ m[{m_begin}:{m_end}] : {tokens[t_begin:t_end]} --> {labels[m_begin:m_end]}')
             print()
 
 

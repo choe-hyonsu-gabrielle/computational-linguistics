@@ -27,7 +27,7 @@ class POSSubwordMorphemeAlignment:
             print(sentence.words[word_id])
             for opcode, t_begin, t_end, m_begin, m_end in matcher.get_opcodes():
                 if opcode == 'equal':
-                    labels = ['S-'+e.label for e in self.morphemes[word_id][m_begin:m_end]]
+                    labels = [e.label for e in self.morphemes[word_id][m_begin:m_end]]
                 elif opcode == 'replace':
                     if t_end - t_begin == m_end - m_begin:
                         labels = [f'$-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]

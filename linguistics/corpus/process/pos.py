@@ -19,34 +19,78 @@ class POSSubwordMorphemeAlignment:
 
     def align(self):
         sentence: Sentence = self.pos_layer.super
-        print(sentence.canonical_form)
+        # print(sentence.canonical_form)
         for word_id in range(len(sentence.words)):
             tokens: list[str] = [e.trimmed for e in self.subwords[word_id]]
             morphs: list[str] = [e.form for e in self.morphemes[word_id]]
             matcher = SequenceMatcher(isjunk=None, a=tokens, b=morphs)
-            print(sentence.words[word_id])
+            # print(sentence.words[word_id])
             for opcode, t_begin, t_end, m_begin, m_end in matcher.get_opcodes():
                 if opcode == 'equal':
                     labels = [e.label for e in self.morphemes[word_id][m_begin:m_end]]
+                    # exact match
+                    status = 'OK'
                 elif opcode == 'replace':
-                    if t_end - t_begin == m_end - m_begin:
-                        labels = [f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
-                    elif 1 == t_end - t_begin < m_end - m_begin:
+                    if 1 == t_end - t_begin < m_end - m_begin:
                         labels = ['+'.join([f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]])]
-                    elif 1 == m_end - m_begin < t_end - t_begin:
+                        # 1:n literal match
+                        status = 'OK'
+                    elif t_end - t_begin > m_end - m_begin == 1:
                         labels = ['I-' + self.morphemes[word_id][m_begin:m_end][0].label] * (t_end - t_begin)
                         labels[0] = 'B' + labels[0][1:]
                         labels[-1] = 'E' + labels[-1][1:]
+                        # n:1 expanded labels match
+                        status = 'OK'
+                    elif t_end - t_begin == m_end - m_begin:
+                        labels = [f'{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
+                        # n:n literal match
+                        status = 'CHECK'
+                    elif t_end - t_begin > m_end - m_begin:
+                        labels = [f'?-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
+                        replaced_labels = []
+                        for ti, tj, k in self.cumulative_reduce(tokens[t_begin:t_end], morphs[m_begin:m_end]):
+                            e = self.morphemes[word_id][m_begin + k]
+                            expanded_label = ['I-' + e.label] * (tj - ti)
+                            expanded_label[0] = 'B' + expanded_label[0][1:]
+                            expanded_label[-1] = 'E' + expanded_label[-1][1:]
+                            replaced_labels.extend(expanded_label)
+                        if len(tokens[t_begin:t_end]) == len(replaced_labels):
+                            labels = replaced_labels
+                            status = 'FIXED'
+                        else:
+                            status = 'WHY?'
                     else:
                         labels = [f'?-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
+                        status = 'BAD'
                 elif opcode == 'insert':
                     labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
+                    status = 'BAD'
                 elif opcode == 'delete':
                     labels = [f'X-{e.form}/{e.label}' for e in self.morphemes[word_id][m_begin:m_end]]
+                    status = 'BAD'
                 else:
                     raise NotImplementedError(opcode)
-                print(f'\t"{opcode:7}" t[{t_begin}:{t_end}] vs m[{m_begin}:{m_end}] - {tokens[t_begin:t_end]} → {labels}')
-            print()
+                if status != 'OK':
+                    print(f'\t"{opcode:7}" [{status:5}] t[{t_begin}:{t_end}] vs m[{m_begin}:{m_end}] - {tokens[t_begin:t_end]} → {labels}')
+        # print()
+
+    @staticmethod
+    def cumulative_reduce(sequence_a, sequence_b):
+        a_i, a_j, b_id = 0, 1, 0
+        buffer = ''
+        result = []
+        for t in sequence_a:
+            buffer += t
+            if buffer == sequence_b[b_id]:
+                result.append((a_i, a_j, b_id))
+                a_i += a_j
+                a_j = a_i + 1
+                b_id += 1
+                buffer = ''
+            else:
+                a_j += 1
+        return result
+
 
 
 class POSProcess(Process):

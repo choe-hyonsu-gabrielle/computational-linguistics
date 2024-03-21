@@ -6,11 +6,13 @@ if __name__ == '__main__':
     # corpus = Corpus.from_files('D:/Corpora & Language Resources/modu-corenlp/layers-complete/*/*.json')
     # corpus.to_pickle('linguistics/corpus/corpus.pkl')
     corpus = Corpus.from_pickle('linguistics/corpus/corpus.pkl')
-
     tokenizer = AutoTokenizer.from_pretrained('klue/bert-base')
     pos_process = POSProcess(tokenizer=tokenizer)
 
-    for snt in corpus.iter_sentences():
-        alignment = pos_process(snt.pos)
-        alignment.align()
-        input('Press enter to continue...')
+    while not input('press enter to continue:'):
+        print()
+        for snt in corpus.sample_sentences(k=500):
+            if snt.pos:
+                alignment = pos_process(snt.pos)
+                alignment.align()
+        print()
